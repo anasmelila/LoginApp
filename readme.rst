@@ -1,71 +1,162 @@
-###################
-What is CodeIgniter
-###################
+# LoginApp - Google OAuth & Twilio Integration
 
-CodeIgniter is an Application Development Framework - a toolkit - for people
-who build web sites using PHP. Its goal is to enable you to develop projects
-much faster than you could if you were writing code from scratch, by providing
-a rich set of libraries for commonly needed tasks, as well as a simple
-interface and logical structure to access these libraries. CodeIgniter lets
-you creatively focus on your project by minimizing the amount of code needed
-for a given task.
+## Overview
+LoginApp is a CodeIgniter-based web application that allows users to log in using Google OAuth, access their Google Calendar events, and set up automated phone call reminders using Twilio.
 
-*******************
-Release Information
-*******************
+## Features
+- Google OAuth authentication
+- Fetch events from Google Calendar
+- Save & update user phone numbers
+- Automated Twilio call reminders
+- Cron job for event checking
 
-This repo contains in-development code for future releases. To download the
-latest stable release please visit the `CodeIgniter Downloads
-<https://codeigniter.com/download>`_ page.
+---
 
-**************************
-Changelog and New Features
-**************************
+## Installation
+### Prerequisites
+- PHP 7.4 or later
+- CodeIgniter 3
+- MySQL Database
+- Composer
+- Google OAuth credentials
+- Twilio API credentials
+- XAMPP/WAMP (if using Windows)
 
-You can find a list of all changes for each release in the `user
-guide change log <https://github.com/bcit-ci/CodeIgniter/blob/develop/user_guide_src/source/changelog.rst>`_.
+### Step 1: Clone Repository
+```sh
+git clone https://github.com/anasmelila/LoginApp.git
+cd loginapp
+```
 
-*******************
-Server Requirements
-*******************
+### Step 2: Install Dependencies
+Run the following command to install required dependencies:
+```sh
+composer install
+```
 
-PHP version 5.6 or newer is recommended.
+### Step 3: Install Google API & Twilio SDK
+Install Google API Client:
+```sh
+composer require google/apiclient
+```
+Install Twilio SDK:
+```sh
+composer require twilio/sdk
+```
 
-It should work on 5.3.7 as well, but we strongly advise you NOT to run
-such old versions of PHP, because of potential security and performance
-issues, as well as missing features.
+### Step 4: Configure Database
+1. Create a database named `loginapp`.
+2. Import the `loginapp.sql` file into your MySQL database.
+3. Update `application/config/database.php` with your database credentials:
 
-************
-Installation
-************
+```php
+$db['default'] = array(
+    'dsn'   => '',
+    'hostname' => 'localhost',
+    'username' => 'root',
+    'password' => '',
+    'database' => 'loginapp',
+    'dbdriver' => 'mysqli',
+    'dbprefix' => '',
+    'pconnect' => FALSE,
+    'db_debug' => (ENVIRONMENT !== 'production'),
+    'cache_on' => FALSE,
+    'char_set' => 'utf8',
+    'dbcollat' => 'utf8_general_ci',
+);
+```
 
-Please see the `installation section <https://codeigniter.com/userguide3/installation/index.html>`_
-of the CodeIgniter User Guide.
+### Step 5: Configure Google OAuth
+1. Go to [Google Developer Console](https://console.developers.google.com/).
+2. Create a new project and enable the **Google Calendar API**.
+3. Generate OAuth 2.0 credentials.
+4. Add your callback URL (`http://localhost/loginapp/auth/google_login`) in the **OAuth Consent Screen**.
+5. Update `application/controllers/Auth.php`:
 
-*******
-License
-*******
+```php
+$client->setClientId('YOUR_GOOGLE_CLIENT_ID');
+$client->setClientSecret('YOUR_GOOGLE_CLIENT_SECRET');
+$client->setRedirectUri(base_url('auth/google_login'));
+```
 
-Please see the `license
-agreement <https://github.com/bcit-ci/CodeIgniter/blob/develop/user_guide_src/source/license.rst>`_.
+### Step 6: Configure Twilio
+1. Create an account on [Twilio](https://www.twilio.com/).
+2. Get your **Account SID**, **Auth Token**, and **Twilio Phone Number**.
+3. Update `application/controllers/Cron_job.php`:
 
-*********
-Resources
-*********
+```php
+private $twilio_sid = 'YOUR_TWILIO_SID';
+private $twilio_token = 'YOUR_TWILIO_AUTH_TOKEN';
+private $twilio_from_number = 'YOUR_TWILIO_PHONE_NUMBER';
+```
 
--  `User Guide <https://codeigniter.com/docs>`_
--  `Contributing Guide <https://github.com/bcit-ci/CodeIgniter/blob/develop/contributing.md>`_
--  `Language File Translations <https://github.com/bcit-ci/codeigniter3-translations>`_
--  `Community Forums <http://forum.codeigniter.com/>`_
--  `Community Wiki <https://github.com/bcit-ci/CodeIgniter/wiki>`_
--  `Community Slack Channel <https://codeigniterchat.slack.com>`_
+### Step 7: Run the Application
+Start the local server:
+```sh
+php -S localhost:8000 -t public/
+```
+Visit `http://localhost/loginapp` in your browser.
 
-Report security issues to our `Security Panel <mailto:security@codeigniter.com>`_
-or via our `page on HackerOne <https://hackerone.com/codeigniter>`_, thank you.
+---
 
-***************
-Acknowledgement
-***************
+## Usage
+### 1. Login via Google
+- Click on **Login with Google**.
+- Grant permissions to access your Google Calendar.
+- You will be redirected to the dashboard.
 
-The CodeIgniter team would like to thank EllisLab, all the
-contributors to the CodeIgniter project and you, the CodeIgniter user.
+### 2. Add Your Mobile Number
+- Go to **Dashboard**.
+- Enter your mobile number and save it.
+
+### 3. Cron Job Setup
+To check for events and trigger Twilio calls automatically:
+
+#### Linux (Cron Job)
+Edit the crontab:
+```sh
+crontab -e
+```
+Add the following line:
+```sh
+*/5 * * * * php /path/to/index.php cron_job check_calendar_events
+```
+
+#### Windows (Task Scheduler)
+1. Create a `.bat` file (e.g., `cron_job.bat`) with the following content:
+```sh
+@echo off
+D:\xampp\php\php.exe D:\xampp\htdocs\loginapp\index.php cron_job check_calendar_events
+```
+2. Schedule it to run every 5 minutes in **Task Scheduler**.
+
+---
+
+## Database Structure
+### `users` Table
+| Column       | Type         | Description          |
+|-------------|-------------|----------------------|
+| id          | INT (AUTO_INCREMENT) | Primary Key |
+| name        | VARCHAR(255) | User's Name |
+| email       | VARCHAR(255) | User's Email |
+| google_access_token | TEXT | OAuth Token |
+| phone       | VARCHAR(15) | User's Phone Number |
+
+---
+
+## Troubleshooting
+### 1. Google Login Not Working?
+- Ensure the callback URL is correctly set in the Google Developer Console.
+- Check if Google Calendar API is enabled.
+
+### 2. Twilio Calls Not Working?
+- Ensure you’re using a verified phone number in **Twilio Trial Mode**.
+- Check Twilio logs for errors.
+
+### 3. Cron Job Not Executing?
+- Run manually: `php index.php cron_job check_calendar_events`
+- Check cron logs (`/var/log/syslog` on Linux).
+
+---
+
+
